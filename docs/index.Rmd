@@ -9,13 +9,229 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Bienvenidos al Laboratorio de Ornitologia UNAH 
+### Bienvenidos al Laboratorio de Ornitologia UNAH 
 
+# Practicas de analisis estadistico {.tabset .tabset-pills}
 
-# Practcias de analisis estadistico {.tabset .tabset-pills}
+## Operaciones basicas
+
+- Sumar
+
+```{r, results='hide'}
+2 + 2
+3 + 2
+1+ 3
+
+```
+
+- Restar
+
+```{r, results='hide'}
+2 - 2
+3 - 2
+1 - 4
+
+```
+
+- Multiplicar
+
+```{r, results='hide'}
+2 * 2
+2 * 8
+3 * 3
+```
+
+- Dividir
+
+```{r, results='hide'}
+2 / 2
+2 / 3
+2/ 1
+```
+
+- Raiz cuadrada
+
+```{r, results='hide'}
+sqrt(4)
+sqrt(8)
+sqrt(27)
+```
+
+- Exponencial y Logaritmo
+
+```{r, results='hide'}
+exp(8)
+log(8)
+
+log(exp(8))
+
+```
+
+### Como crear variables y tablas
+
+- Variable numericas
+```{r, results='hide'}
+x <- 5
+
+x <- 1:100
+
+x <- c(1, 4, 6, 7, 8, 3 ,5)
+```
+
+- Variables categoricas
+
+```{r, results='hide'}
+Estudiantes <- "SeccionB"
+
+Estudiantes <- c("Carlos", "Martha", "Fernando")
+```
+
+- Variables con distribucion normal
+
+```{r, results='hide'}
+Altura <- rnorm(1000, mean= 160, sd= 25)
+Edad <- rnorm(1000, mean = 40, sd = 20)
+```
+
+- Crear tabla
+
+```{r}
+Tabla <- data.frame(Altura, Edad)
+
+head(Tabla)
+```
+
+- Cargar base de datos de nuestro directorio
+
+```{r, warning=FALSE }
+library(here)
+
+birds <- read.csv(here("data", "bird.sta.csv"))
+
+head(birds[,1:8])
+
+```
 
 
 ## Practica 7: Analsis de Diversidad de especies
+
+- Primero necesitamos cargar nuestra base de datos
+
+```{r}
+birds <- read.csv(here("data", "bird.sta.csv"))
+```
+
+- Podemos visualizar nuestra base de datos y observar la estructura de filas y columnas
+
+```{r}
+head(birds[,1:10])
+```
+
+- Realizar curva de acumulacion de especies
+
+```{r, warning=FALSE}
+library(vegan)
+
+CAE <- specaccum(birds[,4:81])
+
+plot(CAE)
+```
+
+- Podemos darle mas estetica a nuestro grafico
+
+```{r}
+plot(CAE, ci.type = "poly",
+          ci.col = "gray",
+          ci.lty = 0,
+          main = "Curva de acumulacion de especies",
+          ylab = "Riqueza de especies",
+          xlab = "Esfuerzo de muestreo")
+```
+
+- Como podemos comparar la riqueza de especies por typo de `basin`?
+
+```{r}
+table(birds$basin)
+
+D <- subset(birds, basin == "D")
+L <- subset(birds, basin == "L")
+N <- subset(birds, basin == "N")
+
+
+CAE_D <- specaccum(D[,4:81])
+CAE_L <- specaccum(L[,4:81])
+CAE_N <- specaccum(N[,4:81])
+
+plot(CAE_L, ci.type = "poly",
+          ci.col = "gray",
+          ci.lty = 0,
+          main = "Curva de acumulacion de especies",
+          ylab = "Riqueza de especies",
+          xlab = "Esfuerzo de muestreo")
+
+plot(CAE_D, ci.type = "poly",
+          ci.col = "gray",
+          ci.lty = 0,
+          col = "red",
+          add = TRUE)
+
+plot(CAE_N, ci.type = "poly",
+          ci.col = "gray",
+          ci.lty = 0,
+          col = "blue",
+          add = TRUE)
+```
+
+- Utilicemos un metodo mas adeacudo para visualizar las diferencias
+
+```{r}
+birds$Riqueza <- specnumber(birds[,4:81])
+
+boxplot(Riqueza ~ basin, data= birds)
+```
+
+
+- Ahora utilicemos una tecnica mas adecuada para la comparacion
+
+```{r, warning=FALSE}
+library(FSA)
+library(ggplot2)
+
+Riqueza_Basin <- Summarize(Riqueza ~ basin, data= birds)
+Riqueza_Basin$IC <- 1.96 * Riqueza_Basin$sd / sqrt(Riqueza_Basin$n)
+Riqueza_Basin
+
+ggplot(Riqueza_Basin, aes(x= basin, y= mean)) +
+  geom_point(size= 4, shape = 15 ) +
+  geom_errorbar(aes(ymin = mean - IC,
+                    ymax = mean + IC))+
+  labs(title = "Riqueza de especies por basin",
+       y= "Riqueza",
+       x= "Basin") +
+  theme_classic()
+
+```
+
+- Diversidad de especies
+
+```{r}
+
+birds$diversidad <- diversity(birds[,4:81], index = "simpson" )
+
+diversidad_Basin <- Summarize(diversidad ~ basin, data= birds)
+diversidad_Basin$IC <- 1.96 * diversidad_Basin$sd / sqrt(diversidad_Basin$n)
+diversidad_Basin
+
+ggplot(diversidad_Basin, aes(x= basin, y= mean)) +
+  geom_point(size= 4, shape = 15 ) +
+  geom_errorbar(aes(ymin = mean - IC,
+                    ymax = mean + IC))+
+  labs(title = "Diversidad de especies por basin",
+       y= "Diversidad",
+       x= "Basin") +
+  theme_classic()
+```
+
 
 ## Practica 8: Analisis de Varianza y Modelos lineales 
 
