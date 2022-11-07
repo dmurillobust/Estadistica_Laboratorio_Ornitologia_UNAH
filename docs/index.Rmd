@@ -10,3 +10,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Bienvenidos al Laboratorio de Ornitologia UNAH 
+
+
+# Practcias de analisis estadistico {.tabset .tabset-pills}
+
+
+## Practica 7: Analsis de Diversidad de especies
+
+## Practica 8: Analisis de Varianza y Modelos lineales 
+
+## Practica 8: Modelos Lineales Generalizados
+
+
+
+
