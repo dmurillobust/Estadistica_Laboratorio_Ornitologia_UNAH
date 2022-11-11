@@ -1,5 +1,5 @@
 ---
-title: "Laboratorio Ornitologia UNAH"
+title: "Laboratorio Ornitologia UNAH 2022"
 author: "David Murillo"
 date: '2022-11-07'
 output: html_document
@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, results='hide'}
 2 + 2
 3 + 2
-1+ 3
+1 + 3
 
 ```
 
@@ -89,7 +89,7 @@ Estudiantes <- c("Carlos", "Martha", "Fernando")
 - Variables con distribucion normal
 
 ```{r, results='hide'}
-Altura <- rnorm(1000, mean= 160, sd= 25)
+Altura <- rnorm(1000, mean= 160, sd= 25) 
 Edad <- rnorm(1000, mean = 40, sd = 20)
 ```
 
@@ -118,6 +118,8 @@ head(birds[,1:8])
 - Primero necesitamos cargar nuestra base de datos
 
 ```{r}
+library(here)
+
 birds <- read.csv(here("data", "bird.sta.csv"))
 ```
 
@@ -232,8 +234,185 @@ ggplot(diversidad_Basin, aes(x= basin, y= mean)) +
   theme_classic()
 ```
 
+## Practica 7: Rarefaccion con ggplot2 (Optativo)
 
-## Practica 8: Analisis de Varianza y Modelos lineales 
+Esta es una seccion extra para grafica curvas de acumulacion de especies de forma mas estetica.
+
+Comenzemos cargando la base de datos
+
+```{r}
+library(here)
+Aves <- read.csv(here("data", "bird.sta.csv"))
+```
+
+Necesitamos seleccionar nuestros categorias de la variable `sub`
+
+```{r}
+table(Aves$sub)
+
+NN <- subset(Aves, sub == "NN")
+TC <- subset(Aves, sub == "TC")
+BC <- subset(Aves, sub == "BC")
+```
+
+Ahora realicemos la funciones `specaccum` para cada categoria seleccionada
+
+```{r}
+library(vegan)
+
+NN_S <- specaccum(NN[,4:81], method = "rarefaction")
+TC_S <- specaccum(TC[,4:81], method = "rarefaction")
+BC_S <- specaccum(BC[,4:81], method = "rarefaction")
+```
+
+Ahora construimos una tabla utilizando los resultado provenientes de `specaccum`
+
+```{r}
+NN_T <- data.frame(Riqueza = NN_S$richness,
+                   DS = NN_S$sd,
+                   Muestreos = NN_S$sites,
+                   Sistema = "NN")
+
+TC_T <- data.frame(Riqueza = TC_S$richness,
+                   DS = TC_S$sd,
+                   Muestreos = TC_S$sites,
+                   Sistema = "TC")
+
+BC_T <- data.frame(Riqueza = BC_S$richness,
+                   DS = BC_S$sd,
+                   Muestreos = BC_S$sites,
+                   Sistema = "BC")
+```
+
+Combinemos nuestras tablas
+
+```{r}
+TablaFinal <- rbind(NN_T, TC_T, BC_T)
+
+head(TablaFinal)
+```
+
+Necesitamos estimar el intervalo de confianza al 95%
+
+```{r}
+TablaFinal$IC <- 1.96 * TablaFinal$DS/sqrt(1) # Porque 1?
+```
+
+Ahora grafiquemos con ggplot2
+
+```{r}
+library(ggplot2)
+
+ggplot(data=TablaFinal, 
+       aes(x=Muestreos, y=Riqueza, colour= Sistema)) +
+  geom_line()+ 
+  geom_ribbon(aes(ymin=Riqueza - IC, 
+                  ymax=Riqueza + IC),
+              linetype=0, alpha=0.1)+
+  labs(title= "Riqueza de especies",
+       x= "muestreos")+
+  theme_classic()
+
+
+```
+
+
+## Practica 8: Analisis de Varianza (ANOVA) y Modelos lineales 
+
+En la practica 7 logramos graficar curvas de acumulacion de especies para comparar la riqueza entre sistemas, al igual logramos revisar la diversidad por sistema. Ahora nos enfocaremos a determinar si exiten diferencias significativas entre la riqueza y diversidad entre sistema.
+
+Cargar paquetes
+```{r}
+library(here)
+library(ggplot2)
+library(car)
+library(vegan)
+
+```
+
+Cargar base de datos
+
+```{r}
+Aves <- read.csv(here("data", "bird.sta.csv"))
+```
+
+Estimemos la riqueza y diversidad
+
+```{r}
+Aves$Riqueza <- specnumber(Aves[,4:81])
+
+Aves$Diversidad <- diversity(Aves[,4:81])
+
+```
+
+Realizaremos un t.test (T de Student) para comparar la riqueza y diversidad solo entre dos sistemas
+
+```{r}
+DosSistemas <- subset(Aves, basin %in% c("D", "L"))
+
+table(DosSistemas$basin)
+
+t.test(Riqueza ~ basin, data= DosSistemas)
+# Que podemos concluir?
+```
+
+Ahora Realizemos un ANOVA entre los tres sistemas
+
+```{r}
+anovaFit <- aov(Riqueza ~ basin, data = Aves)
+
+summary(anovaFit)
+
+# Que podemos concluir
+```
+
+Al parecer necesitamos una prueba de contraste
+
+```{r}
+TukeyHSD(anovaFit, by = "basin")
+# Que podemos concluir
+```
+
+Otra forma de realizar un ANOVA es con la funcion lm para modelos lineales
+
+```{r}
+summary(lm(Riqueza ~ basin, data = Aves))
+# Que podemos concluir
+```
+
+Al igual que con el ANOVA podemos hacer una prueba de contraste
+
+```{r}
+library(multcomp)
+
+Aves$basin <- factor(Aves$basin)
+
+fit1 <- lm(Riqueza ~ basin, data = Aves)
+
+summary(glht(fit1, mcp("basin" = "Tukey")))
+
+# Mismo resultados que el ANOVA ?
+
+```
+
+Que tal si utilizamos modelos lineales para explicar la riqueza mediante la diversidad
+
+```{r}
+fit2 <- lm(Riqueza ~ Diversidad, data= Aves)
+summary(fit2)
+
+# Que podemos concluir?
+```
+
+Ahora realizemos un ANCOVA
+
+```{r}
+fit3 <- lm(Riqueza ~ Diversidad + basin, data= Aves)
+summary(fit3)
+
+#Que podemos concluir?
+```
+
 
 ## Practica 8: Modelos Lineales Generalizados
 
