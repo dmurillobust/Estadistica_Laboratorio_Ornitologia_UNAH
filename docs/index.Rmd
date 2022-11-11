@@ -414,8 +414,86 @@ summary(fit3)
 ```
 
 
-## Practica 8: Modelos Lineales Generalizados
+## Practica 9: Modelos Lineales Generalizados
+
+Los modelos lineales no siempre se aplican en estudios de abundancia de aves, que modelos son recomendables?
+
+Cargar paquetes
+```{r}
+library(here)
+library(ggplot2)
+library(car)
+library(vegan)
+library(DHARMa)
+library(AICcmodavg)
+library(multcomp)
+
+```
+
+Cargar base de datos
+
+```{r}
+Aves <- read.csv(here("data", "bird.sta.csv"))
+
+Aves$Riqueza <- specnumber(Aves[,4:81])
+Aves$Diversidad <- diversity(Aves[,4:81])
+
+Aves$basin <- factor(Aves$basin)
+```
+
+Que tal si utilizamos modelos lineales generalizados para explicar la riqueza mediante la diversidad
+
+```{r}
+glm_fit1 <- glm(Riqueza ~ Diversidad, family = "poisson", data= Aves)
+summary(glm_fit1)
+
+# Que podemos concluir?
+```
+
+Ahora realizemos un glm para abundancia
+
+```{r}
+glm_fit2 <- lm(WIWA ~ basin, data= Aves)
+summary(glm_fit2)
+
+#Que podemos concluir?
+```
+
+Al parecer necesitamos una prueba de contraste
+
+```{r}
+summary(glht(glm_fit2, mcp("basin" = "Tukey")) )
+
+# Que podemos concluir
+```
 
 
+Hagamos un modelo mas
 
 
+```{r}
+glm_fit3 <- lm(WIWA ~ basin + Riqueza, data= Aves)
+summary(glm_fit3)
+```
+
+Que modelo elegimos?
+
+```{r}
+Modelos <- list(glm_fit2, glm_fit3)
+Nombres <- c("M2", "M3")
+
+aictab(Modelos, Nombres, sort = TRUE)
+```
+
+Validemos nuestro modelo
+
+
+```{r}
+testResiduals(glm_fit3)
+```
+
+```{r}
+testOverdispersion(glm_fit3)
+```
+
+Al parece la distribucion de los residuales tiene problemas, que podemos hacer?
